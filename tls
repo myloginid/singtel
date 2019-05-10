@@ -1,0 +1,440 @@
+[External Email: Check before clicking on links or attachments.] 
+hostsfile=/root/cloudera/18-nodes-hostname.txt
+
+hue.bigdata.xxxx.com - F5
+hive.bigdata.xxxx.com - F5
+impala.bigdata.xxxx.com - F5 
+
+SAN - 
+  pdksfnksnfks01.xxxx.com
+  pdksfnksnfks02.xxxx.com
+  impala.bigdata.xxxx.com
+
+DN, NM, SOLR, HBAse, ...pdksfnksnfks01.xxxx.com
+# cm.bigdata.xxxx.com - DNS
+
+
+XXXXX
+
+
+$JAVA_HOME/bin/keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 
+ -keystore /opt/cloudera/security/pki/$(hostname -f).jks -dname "CN=$node,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" -ext san=dns:$(hostname -f) -validity 365
+
+ keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 
+ -keystore /opt/cloudera/security/pki/$(hostname -f).jks -dname "CN=$node,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" -ext san=dns:$(hostname -f) 
+
+hostsfile=
+ 
+1. Generate a Java keystore
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;    
+    keytool -genkeypair -alias $node \
+    -ext san=dns:$node \
+      -keyalg RSA -keysize 2048 -keystore /opt/cloudera/security/jks/$node-keystore.jks \
+       -dname "CN=$node,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" \
+       -validity 365 \
+      -storepass XXXXX -keypass XXXXX ; 
+done;
+
+verify
+ for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:; 
+    keytool -v -list -keystore /opt/cloudera/security/jks/$node-keystore.jks -storepass XXXXX -keypass XXXXX | grep -e "Alias name\|Owner\|Issuer"; 
+done;
+
+2. Copy jks-original to a new jks
+
+3. Generate a certificate signing request for the host
+
+ for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;    
+    keytool -certreq \
+      -alias $node \
+      -keystore /opt/cloudera/security/jks/$node-keystore.jks \
+      -file /opt/cloudera/security/csr/$node-csr.csr \
+      -ext SAN=dns:$node -ext EKU=serverAuth,clientAuth \
+      -storepass XXXXX -keypass XXXXX  ;  
+done;
+
+verify
+ for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:; 
+    openssl req -in /opt/cloudera/security/csr/$node-csr.csr -text | grep -e "Subject:\|DNS:"
+done;
+
+
+  keytool -genkeypair -alias hue.bigdata.xxxx.com \
+    -ext san=dns:xxxxxapos01.xxxxxxxxx.xxxx.com,dns:xxxxxapos02.xxxxxxxxx.xxxx.com,dns:xxxxxapos03.xxxxxxxxx.xxxx.com,dns:hue.bigdata.xxxx.com \
+      -keyalg RSA -keysize 2048 -keystore /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks \
+       -dname "CN=hue.bigdata.xxxx.com,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" \
+       -validity 365 \
+      -storepass XXXXX -keypass XXXXX ; 
+
+keytool -v -list -keystore /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks -storepass XXXXX -keypass XXXXX | grep -e "Alias name\|Owner\|Issuer"; 
+	  
+keytool -certreq \
+-alias  hue.bigdata.xxxx.com \
+-keystore /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks \
+-file /opt/cloudera/security/csr/hue.xxxxxxxxx.xxxx.com-csr.csr \
+-ext san=dns:xxxxxapos01.xxxxxxxxx.xxxx.com,dns:xxxxxapos02.xxxxxxxxx.xxxx.com,dns:xxxxxapos03.xxxxxxxxx.xxxx.com,dns:hue.bigdata.xxxx.com -ext EKU=serverAuth,clientAuth \
+-storepass XXXXX -keypass XXXXX  ;  
+
+openssl req -in /opt/cloudera/security/csr/hue.xxxxxxxxx.xxxx.com-csr.csr -text | grep -e "Subject:\|DNS:"
+
+
+	   
+
+
+keytool -genkeypair -alias hive.bigdata.xxxx.com \
+-ext san=dns:xxxxxapos02.xxxxxxxxx.xxxx.com,dns:xxxxxapos03.xxxxxxxxx.xxxx.com,dns:hive.bigdata.xxxx.com \
+-keyalg RSA -keysize 2048 -keystore /opt/cloudera/security/jks/hive.bigdata.xxxx.com-keystore.jks \
+-dname "CN=hive.bigdata.xxxx.com,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" \
+-validity 365 \
+-storepass XXXXX -keypass XXXXX ; 
+
+keytool -v -list -keystore /opt/cloudera/security/jks/hive.bigdata.xxxx.com-keystore.jks -storepass XXXXX -keypass XXXXX | grep -e "Alias name\|Owner\|Issuer"; 
+
+keytool -certreq \
+-alias  hive.bigdata.xxxx.com \
+-keystore /opt/cloudera/security/jks/hive.bigdata.xxxx.com-keystore.jks \
+-file /opt/cloudera/security/csr/hive.xxxxxxxxx.xxxx.com-csr.csr \
+-ext san=dns:xxxxxapos02.xxxxxxxxx.xxxx.com,dns:xxxxxapos03.xxxxxxxxx.xxxx.com,dns:hive.bigdata.xxxx.com -ext EKU=serverAuth,clientAuth \
+-storepass XXXXX -keypass XXXXX  ;  
+
+openssl req -in /opt/cloudera/security/csr/hive.xxxxxxxxx.xxxx.com-csr.csr -text | grep -e "Subject:\|DNS:"
+
+
+./launch-test.sh -h ./iper3_hosts.ini -u root -p 10
+
+
+
+keytool -genkeypair -alias hiveldap.bigdata.xxxx.com \
+-ext san=dns:xxxxxapos01.xxxxxxxxx.xxxx.com,dns:hiveldap.bigdata.xxxx.com \
+-keyalg RSA -keysize 2048 -keystore /opt/cloudera/security/jks/hiveldap.bigdata.xxxx.com-keystore.jks \
+-dname "CN=hiveldap.bigdata.xxxx.com,OU=OCBC IT Divison,O=Oversea-Chinese Banking Corporation Limited,L=Singapore,C=SG" \
+-validity 365 \
+-storepass XXXXX -keypass XXXXX ; 
+
+keytool -v -list -keystore /opt/cloudera/security/jks/hiveldap.bigdata.xxxx.com-keystore.jks -storepass XXXXX -keypass XXXXX | grep -e "Alias name\|Owner\|Issuer"; 
+
+keytool -certreq \
+-alias  hiveldap.bigdata.xxxx.com \
+-keystore /opt/cloudera/security/jks/hiveldap.bigdata.xxxx.com-keystore.jks \
+-file /opt/cloudera/security/csr/hiveldap.xxxxxxxxx.xxxx.com-csr.csr \
+-ext san=dns:xxxxxapos01.xxxxxxxxx.xxxx.com,dns:hiveldap.bigdata.xxxx.com -ext EKU=serverAuth,clientAuth \
+-storepass XXXXX -keypass XXXXX  ;  
+
+openssl req -in /opt/cloudera/security/csr/hiveldap.xxxxxxxxx.xxxx.com-csr.csr -text | grep -e "Subject:\|DNS:"
+
+
+
+
+
+
+4. Request for Signing
+DONE
+
+5. Verify Certificate
+
+
+for node in `cat /root/2hosts`; 
+do
+    echo ------------- NODE: $node:; 
+    openssl x509 -in /opt/cloudera/security/certs/$node.pem -text -noout | grep -e "Subject:\|DNS:"
+done;
+
+6. Append RootCA into $host-cert.pem
+
+for node in `cat /root/2hosts`; 
+do
+    echo ------------- NODE: $node:; 
+    cat /opt/cloudera/security/cacerts/RootCA.pem >> /opt/cloudera/security/certs/$node.pem
+	cat /opt/cloudera/security/cacerts/IntermediateCA.pem >> /opt/cloudera/security/certs/$node.pem
+done;
+
+7. Import $host-cert.pem into $host-keystore.jks
+
+for node in `cat /root/2hosts`; 
+do
+    echo ------------- NODE: $node:;  
+    keytool -importcert -alias $node -file /opt/cloudera/security/certs/$node.pem -keystore /opt/cloudera/security/jks/$node-keystore.jks -storepass XXXXX -keypass XXXXX;
+done
+
+
+8. Import IndosatRootCA.pem into $host-keystore.jks
+
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+    keytool -importcert \
+    -noprompt\
+    -importcert\
+    -trustcacerts\
+    -alias "DigiCert Global Root CA"\
+    -file /opt/cloudera/security/cacerts/RootCA.pem\
+    -keystore /opt/cloudera/security/jks/$node-keystore.jks\
+    -storepass XXXXX\
+    -keypass XXXXX
+
+    echo ------------- NODE: $node:;
+    keytool -importcert \
+    -noprompt\
+    -importcert\
+    -trustcacerts\
+    -alias "DigiCert SHA2 Secure Server CA"\
+    -file /opt/cloudera/security/cacerts/RootCA.pem\
+    -keystore /opt/cloudera/security/jks/$node-keystore.jks\
+    -storepass XXXXX\
+    -keypass XXXXX
+done
+
+9. Create Keystore
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+    keytool -importkeystore -srckeystore /opt/cloudera/security/jks/$node-keystore.jks \
+    -srcstorepass XXXXX -srckeypass XXXXX -destkeystore /opt/cloudera/security/keystore/$node-keystore.p12 \
+    -deststoretype PKCS12 -srcalias $node -deststorepass XXXXX -destkeypass XXXXX
+done
+
+10. Create key, keynopw
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+    openssl pkcs12 -in /opt/cloudera/security/keystore/$node-keystore.p12 -passin pass:XXXXX -nokeys -out /opt/cloudera/security/x509/$node-cert.pem;
+    openssl pkcs12 -in /opt/cloudera/security/keystore/$node-keystore.p12 -passin pass:XXXXX -nocerts -out /opt/cloudera/security/x509/$node-key.pem -passout pass:XXXXX;
+    openssl rsa -in /opt/cloudera/security/x509/$node-key.pem -passin pass:XXXXX -out /opt/cloudera/security/x509/$node-keynopw.pem;
+done
+
+
+11. Distribute
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+    ssh root@$node 'mkdir -p /opt/cloudera/security'
+done
+
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+    scp -r /opt/cloudera/security/cacerts/ root@$node:/opt/cloudera/security/
+    scp -r /opt/cloudera/security/jks/ root@$node:/opt/cloudera/security/
+    scp -r /opt/cloudera/security/x509/ root@$node:/opt/cloudera/security/
+	scp -r /opt/cloudera/security/truststore/ root@$node:/opt/cloudera/security/
+done
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+    scp -r /opt/cloudera/security/cacerts/* root@$node:/opt/cloudera/security/cacerts/
+    scp -r /opt/cloudera/security/jks/hive* root@$node:/opt/cloudera/security/jks/
+    scp -r /opt/cloudera/security/x509/hive* root@$node:/opt/cloudera/security/x509/
+	scp -r /opt/cloudera/security/jks/hue* root@$node:/opt/cloudera/security/jks/
+    scp -r /opt/cloudera/security/x509/hue* root@$node:/opt/cloudera/security/x509/
+done
+
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+    scp /opt/cloudera/security/jks/hue*keystore.jks root@$node:/opt/cloudera/security/jks/;
+    scp /opt/cloudera/security/x509/hue*-cert.pem root@$node:/opt/cloudera/security/x509/;
+    scp /opt/cloudera/security/x509/hue*-keynopw.pem root@$node:/opt/cloudera/security/x509/;
+    scp /opt/cloudera/security/x509/hue*-key.pem root@$node:/opt/cloudera/security/x509/;
+done
+
+
+12. create soft link
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/`hostname -f`-cert.pem /opt/cloudera/security/x509/cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/`hostname -f`-key.pem /opt/cloudera/security/x509/key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/`hostname -f`-keynopw.pem /opt/cloudera/security/x509/keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/`hostname -f`-keystore.jks /opt/cloudera/security/jks/keystore.jks';
+done;      
+
+ln -s /opt/cloudera/security/x509/`hostname -f`-cert.pem /opt/cloudera/security/x509/cert.pem
+ln -s /opt/cloudera/security/x509/`hostname -f`-key.pem /opt/cloudera/security/x509/key.pem
+ln -s /opt/cloudera/security/x509/`hostname -f`-keynopw.pem /opt/cloudera/security/x509/keynopw.pem
+ln -s /opt/cloudera/security/jks/`hostname -f`-keystore.jks /opt/cloudera/security/jks/keystore.jks
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-cert.pem /opt/cloudera/security/x509/hue-cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-key.pem /opt/cloudera/security/x509/hue-key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-keynopw.pem /opt/cloudera/security/x509/hue-keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks /opt/cloudera/security/jks/hue-keystore.jks';
+done;     
+
+
+for node in `cat /root/hive`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hive.bigdata.xxxx.com-cert.pem /opt/cloudera/security/x509/hive-cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hive.bigdata.xxxx.com-key.pem /opt/cloudera/security/x509/hive-key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hive.bigdata.xxxx.com-keynopw.pem /opt/cloudera/security/x509/hive-keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/hive.bigdata.xxxx.com-keystore.jks /opt/cloudera/security/jks/hive-keystore.jks';
+done;     
+
+
+for node in `cat /root/hiveldap`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hiveldap.bigdata.xxxx.com-cert.pem /opt/cloudera/security/x509/hiveldap-cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hiveldap.bigdata.xxxx.com-key.pem /opt/cloudera/security/x509/hiveldap-key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hiveldap.bigdata.xxxx.com-keynopw.pem /opt/cloudera/security/x509/hiveldap-keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/hiveldap.bigdata.xxxx.com-keystore.jks /opt/cloudera/security/jks/hiveldap-keystore.jks';
+done;     
+
+verify
+
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-cert.pem /opt/cloudera/security/x509/hue-cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-key.pem /opt/cloudera/security/x509/hue-key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-keynopw.pem /opt/cloudera/security/x509/hue-keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks /opt/cloudera/security/jks/hue-keystore.jks';
+done;     
+
+
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-cert.pem /opt/cloudera/security/x509/hue-cert.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-key.pem /opt/cloudera/security/x509/hue-key.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/x509/hue.bigdata.xxxx.com-keynopw.pem /opt/cloudera/security/x509/hue-keynopw.pem';
+      ssh root@$node 'ln -s /opt/cloudera/security/jks/hue.bigdata.xxxx.com-keystore.jks /opt/cloudera/security/jks/hue-keystore.jks';
+done;     
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ls -al /opt/cloudera/security/x509/key*'
+      ssh root@$node 'ls -al /opt/cloudera/security/x509/cert*'
+      ssh root@$node 'ls -al /opt/cloudera/security/jks/key*'
+	  ssh root@$node 'ls -al /opt/cloudera/security/x509/hue*'
+      ssh root@$node 'ls -al /opt/cloudera/security/x509/hive*'
+      ssh root@$node 'ls -al /opt/cloudera/security/jks/hue*'
+	  ssh root@$node 'ls -al /opt/cloudera/security/jks/hive*'
+done;     
+
+for node in `cat /root/masters`;  
+do
+    echo ------------- NODE: $node:;
+      ssh root@$node 'ls -al /opt/cloudera/security/jks/key*'
+     ssh root@$node 'ls -al /opt/cloudera/security/jks/hue*'
+	  ssh root@$node 'ls -al /opt/cloudera/security/jks/hive*'
+done;  
+
+ openssl x509 -req -sha256 -extensions v3ext -in ${host}.csr -CA $ROOT_CA -CAkey $ROOT_CA_KEY -CAcreateserial -out ${host}.pem -days $CERT_VALIDITY -extfile <(
+cat <<-EOF
+[v3ext]
+basicConstraints = CA:FALSE
+subjectAltName = DNS:${host},DNS:${LOAD_BALANCER}
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyAgreement
+extendedKeyUsage = serverAuth, clientAuth
+EOF
+
+
+/opt/cloudera/security/jks/keystore.jks
+XXXXX
+/opt/cloudera/security/truststore/truststore.jks
+
+
+pwdcactsg01.xxxxxxxxx.xxxx.com
+OU=Cloudera,OU=APP Systems,DC=OCBCGROUP,DC=OCBC,DC=COM
+CN=EBPCMADSVC,OU=SG Users,DC=OCBCGROUP,DC=OCBC,DC=COM
+
+ebpcmadsvc
+
+
+for node in `cat /root/2hosts`;  
+do
+    echo ------------- NODE: $node:;
+	 openssl  req -in /opt/cloudera/security/csr/${node}-csr.csr -pubkey -noout -outform pem | sha256sum                                                   
+	openssl  x509 -in /opt/cloudera/security/certs/${node}.cer -pubkey -noout -outform pem | sha256sum
+	openssl pkey -in /opt/cloudera/security/x509/${node}-keynopw.pem -pubout -outform pem | sha256sum    
+	echo ------------- DONE:;
+done
+
+
+
+for node in `cat /root/3hosts`;  
+do
+    echo ------------- NODE: $node:;
+    keytool -importkeystore -srckeystore /opt/cloudera/security/jks/$node-keystore.jks \
+    -srcstorepass XXXXX -srckeypass XXXXX -destkeystore /opt/cloudera/security/keystore/$node-keystore.p12 \
+    -deststoretype PKCS12 -srcalias $node -deststorepass XXXXX -destkeypass XXXXX
+done
+
+for node in `cat /root/3hosts`;  
+do
+    echo ------------- NODE: $node:;
+    openssl pkcs12 -in /opt/cloudera/security/keystore/$node-keystore.p12 -passin pass:XXXXX -nokeys -out /opt/cloudera/security/x509/$node-cert.pem;
+    openssl pkcs12 -in /opt/cloudera/security/keystore/$node-keystore.p12 -passin pass:XXXXX -nocerts -out /opt/cloudera/security/x509/$node-key.pem -passout pass:XXXXX;
+    openssl rsa -in /opt/cloudera/security/x509/$node-key.pem -passin pass:XXXXX -out /opt/cloudera/security/x509/$node-keynopw.pem;
+done
+
+
+ keytool -importcert \
+    -noprompt\
+    -importcert\
+    -trustcacerts\
+    -alias "DigiCert Global Root CA"\
+    -file /opt/cloudera/security/cacerts/RootCA.pem\
+    -keystore /opt/cloudera/security/truststore/truststore.jks\
+    -storepass changeit \
+    -keypass changeit
+
+
+
+ keytool -importcert \
+    -noprompt\
+    -importcert\
+    -trustcacerts\
+    -alias "DigiCert SHA2 Secure Server CA"\
+    -file /opt/cloudera/security/cacerts/IntermediateCA.pem\
+    -keystore /opt/cloudera/security/truststore/truststore.jks\
+    -storepass changeit \
+    -keypass changeit
+	
+
+
+for node in `cat /root/3hosts`; 
+do
+    echo ------------- NODE: $node:;
+    keytool -importcert \
+    -noprompt\
+    -trustcacerts\
+    -alias $node\
+    -file  /opt/cloudera/security/certs/$node.pem \
+    -keystore /opt/cloudera/security/truststore/truststore.jks\
+    -storepass changeit \
+    -keypass changeit
+done
+	
+for node in `cat /root/sslhosts`;  
+do
+    echo ------------- NODE: $node:;
+    scp  /opt/cloudera/security/truststore/truststore.jks root@$node:/opt/cloudera/security/truststore/truststore.jks;
+done
+
+
+	/opt/cloudera/security/jks/keystore.jks
+	 /opt/cloudera/security/truststore/truststore.jks
+	XXXXX
